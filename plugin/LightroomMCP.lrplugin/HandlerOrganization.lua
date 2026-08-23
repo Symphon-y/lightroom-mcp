@@ -14,8 +14,20 @@ function HandlerOrganization.setRating(params)
         error('rating must be between 0 and 5')
     end
 
+    -- 0 clears the rating (Lightroom's setRawMetadata rejects a literal 0
+    -- rating -- "Invalid rating: 0" -- clearing requires passing nil).
+    -- NOTE: `(rating == 0) and nil or rating` looks like it should do this
+    -- but doesn't: Lua's and/or ternary idiom falls through to the `or`
+    -- side whenever the `and` branch's value is itself nil/false, so that
+    -- expression always evaluated to `rating` regardless of the condition.
+    -- Found live: it silently passed 0 through and Lightroom rejected it.
+    local ratingToSet = rating
+    if rating == 0 then
+        ratingToSet = nil
+    end
+
     catalog:withWriteAccessDo('Set Rating', function()
-        photo:setRawMetadata('rating', (rating == 0) and nil or rating)
+        photo:setRawMetadata('rating', ratingToSet)
     end)
 
     return { id = photo.localIdentifier, rating = rating }
