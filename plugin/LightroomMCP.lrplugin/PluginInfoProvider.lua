@@ -1,5 +1,3 @@
-local LrFunctionContext = import 'LrFunctionContext'
-
 local State = require 'State'
 local Socket = require 'Socket'
 local Token = require 'Token'
@@ -21,9 +19,7 @@ function PluginInfoProvider.sectionsForTopOfDialog(viewFactory, propertyTable)
                     viewFactory:push_button {
                         title = 'Start Server',
                         action = function()
-                            LrFunctionContext.postAsyncTaskWithContext('LightroomMCP start', function(context)
-                                Socket.start(context)
-                            end)
+                            Socket.start()
                         end,
                     },
                     viewFactory:push_button {

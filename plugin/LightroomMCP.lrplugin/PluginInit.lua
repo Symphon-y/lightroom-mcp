@@ -1,4 +1,3 @@
-local LrFunctionContext = import 'LrFunctionContext'
 local LrPrefs = import 'LrPrefs'
 
 local Log = require 'Log'
@@ -11,12 +10,9 @@ if prefs.autoStartServer == nil then
 end
 
 if prefs.autoStartServer and not State.running then
-    -- A task started with the init script's own function context gets
-    -- cancelled mid-sleep once LrInitPlugin returns, so it needs its own
-    -- context via postAsyncTaskWithContext rather than a bare async task.
-    LrFunctionContext.postAsyncTaskWithContext('LightroomMCP init', function(context)
-        Socket.start(context)
-    end)
+    -- Socket.start() creates its own async task context internally, so it's
+    -- safe to call directly here without wrapping it ourselves.
+    Socket.start()
 end
 
 Log.info('LightroomMCP plugin initialized')

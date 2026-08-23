@@ -8,7 +8,23 @@ if not _G.LightroomMCP_State then
         requestSocket = nil,
         responseSocket = nil,
         token = nil,
-        lastHeartbeat = nil,
+
+        -- Connection tracking. LrSocket connections are not self-healing on
+        -- their own -- onClosed/onError fire and then the socket just sits
+        -- idle until something explicitly calls :reconnect() or rebinds it.
+        receiveConnected = false,
+        sendConnected = false,
+        requestNeedsReconnect = false,
+        responseNeedsRebind = false,
+        responseNeedsReconnect = false,
+        responseGen = 0,
+        instanceId = 0,
+
+        lastConnectedTime = nil,
+        lastRequestTime = nil,
+        inFlightRequests = 0,
+        needsFullRestart = false,
+        freshRestart = false,
     }
 end
 
