@@ -1,5 +1,3 @@
-local Log = require 'Log'
-
 local HandlerSelection = require 'HandlerSelection'
 local HandlerMetadata = require 'HandlerMetadata'
 local HandlerOrganization = require 'HandlerOrganization'
@@ -26,6 +24,14 @@ local ACTIONS = {
 -- request: { hello, id, action, params }. reply(response) sends the result
 -- back over the response socket; response is { id, ok, result } or
 -- { id, ok = false, error }.
+--
+-- Deliberately no pcall here: most handlers call catalog APIs that yield
+-- (getTargetPhotos, withReadAccessDo/withWriteAccessDo, findPhotos), and
+-- Lightroom's embedded Lua 5.1 cannot yield across a pcall's C-call
+-- boundary ("Yielding is not allowed within a C or metamethod call").
+-- Errors are left to propagate to the caller, which handles them with
+-- LrFunctionContext's addFailureHandler instead -- the SDK's actual
+-- yield-safe error mechanism.
 function Dispatch.handle(request, reply)
     local action = ACTIONS[request.action]
     if not action then
@@ -33,13 +39,8 @@ function Dispatch.handle(request, reply)
         return
     end
 
-    local ok, result = pcall(action, request.params or {})
-    if ok then
-        reply { id = request.id, ok = true, result = result }
-    else
-        Log.error('Dispatch: action %s failed: %s', tostring(request.action), tostring(result))
-        reply { id = request.id, ok = false, error = tostring(result) }
-    end
+    local result = action(request.params or {})
+    reply { id = request.id, ok = true, result = result }
 end
 
 return Dispatch

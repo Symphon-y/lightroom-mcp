@@ -54,10 +54,24 @@ local function handleLine(line)
 
     State.inFlightRequests = State.inFlightRequests + 1
     LrTasks.startAsyncTask(function()
-        local ok2, err = pcall(Dispatch.handle, message, sendResponse)
-        if not ok2 then
-            Log.error('Socket: dispatch error: %s', tostring(err))
-        end
+        -- LrFunctionContext's addFailureHandler, not pcall: most handlers
+        -- call catalog APIs that yield, and Lua can't yield across pcall's
+        -- C-call boundary. See the comment in Dispatch.lua for the full
+        -- explanation (this was found by testing against real Lightroom).
+        LrFunctionContext.callWithContext('LightroomMCP dispatch', function(context)
+            local responded = false
+            context:addFailureHandler(function(_, errorMessage)
+                if not responded then
+                    responded = true
+                    Log.error('Socket: dispatch error: %s', tostring(errorMessage))
+                    sendResponse { id = message.id, ok = false, error = tostring(errorMessage) }
+                end
+            end)
+            Dispatch.handle(message, function(response)
+                responded = true
+                sendResponse(response)
+            end)
+        end)
         State.inFlightRequests = math.max(0, State.inFlightRequests - 1)
     end, 'LightroomMCP dispatch')
 end

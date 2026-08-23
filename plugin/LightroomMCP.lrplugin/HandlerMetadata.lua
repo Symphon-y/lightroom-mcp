@@ -16,11 +16,15 @@ function HandlerMetadata.getPhotoMetadata(params)
         error('Photo not found: ' .. tostring(params.photoId))
     end
 
+    -- No pcall around the per-field reads: getRawMetadata can yield for
+    -- some fields, and Lua can't yield across pcall's C-call boundary in
+    -- Lightroom's embedded Lua 5.1. A genuinely invalid field name is a
+    -- programmer error in RAW_FIELDS above, not something to swallow here.
     local raw = {}
     catalog:withReadAccessDo(function()
         for _, field in ipairs(RAW_FIELDS) do
-            local ok, value = pcall(function() return photo:getRawMetadata(field) end)
-            if ok and value ~= nil then
+            local value = photo:getRawMetadata(field)
+            if value ~= nil then
                 if field == 'keywords' and type(value) == 'table' then
                     local names = {}
                     for i, kw in ipairs(value) do
