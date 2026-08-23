@@ -53,6 +53,29 @@ function HandlerOrganization.setFlag(params)
     return { id = photo.localIdentifier, flag = params.flag }
 end
 
+-- Valid colorNameForLabel values (confirmed via SDK research): red, yellow,
+-- green, blue, purple, none. NOTE: reading an unlabeled photo returns
+-- 'grey', but writing 'grey' is rejected -- clearing a label must use
+-- 'none', not the value you'd get back from a read.
+local VALID_COLOR_LABELS = { red = true, yellow = true, green = true, blue = true, purple = true, none = true }
+
+function HandlerOrganization.setColorLabel(params)
+    local catalog = LrApplication.activeCatalog()
+    local photo = PhotoLookup.byId(params.photoId)
+    if not photo then error('Photo not found: ' .. tostring(params.photoId)) end
+
+    local label = params.label
+    if not VALID_COLOR_LABELS[label] then
+        error("label must be one of red, yellow, green, blue, purple, none")
+    end
+
+    catalog:withWriteAccessDo('Set Color Label', function()
+        photo:setRawMetadata('colorNameForLabel', label)
+    end)
+
+    return { id = photo.localIdentifier, label = label }
+end
+
 function HandlerOrganization.setKeywords(params)
     local catalog = LrApplication.activeCatalog()
     local photo = PhotoLookup.byId(params.photoId)

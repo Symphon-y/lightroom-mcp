@@ -15,6 +15,7 @@ local ACTIONS = {
     get_photo_metadata = HandlerMetadata.getPhotoMetadata,
     set_rating = HandlerOrganization.setRating,
     set_flag = HandlerOrganization.setFlag,
+    set_color_label = HandlerOrganization.setColorLabel,
     set_keywords = HandlerOrganization.setKeywords,
     search_photos = HandlerSearch.searchPhotos,
     list_collections = HandlerCollections.listCollections,

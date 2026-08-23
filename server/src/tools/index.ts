@@ -2,6 +2,7 @@ import { getSelectedPhotos } from "./getSelectedPhotos.js";
 import { getPhotoMetadata } from "./getPhotoMetadata.js";
 import { setRating } from "./setRating.js";
 import { setFlag } from "./setFlag.js";
+import { setColorLabel } from "./setColorLabel.js";
 import { setKeywords } from "./setKeywords.js";
 import { searchPhotos } from "./searchPhotos.js";
 import { listCollections } from "./listCollections.js";
@@ -15,6 +16,7 @@ export const tools = [
   getPhotoMetadata,
   setRating,
   setFlag,
+  setColorLabel,
   setKeywords,
   searchPhotos,
   listCollections,
