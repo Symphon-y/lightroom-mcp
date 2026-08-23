@@ -64,9 +64,13 @@ encodeValue = function(v)
         return '"' .. escapeString(v) .. '"'
     elseif t == 'table' then
         if next(v) == nil then
-            -- Ambiguous empty table; our protocol never needs an empty
-            -- array as a bare value, so treat it as an empty object.
-            return '{}'
+            -- Ambiguous empty table -- Lua can't distinguish {} from [].
+            -- Every value we actually send is a list (photos, collections,
+            -- keywords, ...), never a freeform dict that happens to be
+            -- empty, so default to an empty array. (Found live: an empty
+            -- top-level collections list came back as {} and would have
+            -- broken any consumer calling .map()/.length on it.)
+            return '[]'
         end
         return encodeTable(v)
     else
