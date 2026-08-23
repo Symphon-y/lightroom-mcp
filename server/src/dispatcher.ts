@@ -24,6 +24,12 @@ export class Dispatcher {
       // for diagnosing connection-level problems.
       console.error("[lightroom-mcp] plugin socket error:", err.message);
     });
+    // The plugin rebinds/restarts its sockets periodically by design, so a
+    // working connection can drop mid-session (PluginSocket reconnects
+    // automatically). Fail in-flight calls immediately when that happens
+    // instead of leaving them to hang until their own timeout -- the
+    // caller can just retry once PluginSocket reconnects.
+    this.socket.on("disconnected", () => this.rejectAllPending("Lost connection to the Lightroom plugin (it will reconnect automatically -- try again)"));
     await this.socket.connect();
   }
 
@@ -62,6 +68,14 @@ export class Dispatcher {
     } else {
       pending.reject(new Error(String(message.error ?? "Unknown error from Lightroom plugin")));
     }
+  }
+
+  private rejectAllPending(reason: string) {
+    for (const pending of this.pending.values()) {
+      clearTimeout(pending.timer);
+      pending.reject(new Error(reason));
+    }
+    this.pending.clear();
   }
 
   close(): void {
