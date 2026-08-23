@@ -34,35 +34,57 @@ Claude (MCP client, stdio) <--stdio--> MCP server (Node/TypeScript)
   Plug-in Manager and written to `~/.config/lightroom-mcp/token`, checked
   per-message on the plugin side.
 
-## Status: Phase 1 (culling + organization)
+## Status: Phase 1 (culling + organization) — verified working
 
-Implemented tools: `get_selected_photos`, `get_photo_metadata`,
-`set_rating`, `set_flag`, `set_keywords`, `search_photos`,
-`list_collections`, `create_collection`, `add_to_collection`.
+All 9 tools have been run end-to-end against a real Lightroom Classic
+catalog (not just built/reviewed): `get_selected_photos`,
+`get_photo_metadata`, `set_rating`, `set_flag`, `set_keywords`,
+`search_photos` (rating-range filter), `list_collections`,
+`create_collection`, `add_to_collection`. Confirmed live:
+
+- Sockets bind and stay up on `127.0.0.1` only (checked with `netstat`).
+- `Token.lua`'s `LrPathUtils.getStandardFilePath('home')` correctly
+  resolves and the token file is created.
+- `Socket.lua`'s assumption that `LrSocket` delivers one fully-delimited
+  message per `onMessage` callback in receive mode holds.
+- The client survives a transient plugin-side reconnect mid-session
+  (fails the in-flight call fast with a clear error, auto-reconnects,
+  succeeds on retry).
+
+**Not yet exercised:** `search_photos`'s keyword and date-range criteria
+(only the rating-range path has been tested against real `findPhotos`
+behavior) — the field/operation names there are still the least-verified
+part of the SDK usage. Worth a live check before relying on it.
 
 **Phase 2 (batch develop editing — presets, copying develop settings) is
-not implemented yet.** It's the next milestone once Phase 1 is verified
-working.
+not implemented yet.** It's the next milestone.
 
-## Important: this has not been run against real Lightroom Classic yet
+## Bugs found and fixed during live verification
 
-This scaffold was written from SDK documentation and research, not tested
-against a live Lightroom Classic install (no Lightroom available in the
-environment it was built in). Before trusting it with a real catalog:
+Kept here because they're the kind of thing a fresh read of the code
+won't catch — all required actually running against real Lightroom:
 
-1. Read through `plugin/LightroomMCP.lrplugin` and `server/src` yourself —
-   confirm there is no outbound networking beyond `127.0.0.1:58763` /
-   `127.0.0.1:58764`.
-2. Expect to debug the Lua side against Lightroom's actual behavior,
-   especially:
-   - `HandlerSearch.lua`'s `catalog:findPhotos{searchDesc=...}` criteria
-     names/operations — the least-documented part of the SDK; verify
-     against the local SDK's API Reference once installed.
-   - `Token.lua`'s use of `LrPathUtils.getStandardFilePath('home')`.
-   - `Socket.lua`'s assumption that `LrSocket` delivers one fully-delimited
-     message per `onMessage` callback in receive mode.
-3. Confirm only localhost traffic ever appears (`netstat`) during a live
-   session.
+- `LrSocket.bind{}` connections aren't self-healing; they need an
+  explicit `:reconnect()` / rebind loop, not just a persistent bind
+  (`Socket.lua`).
+- Lightroom's embedded Lua 5.1 can't yield a coroutine across `pcall`'s
+  C-call boundary, and several catalog APIs yield internally — replaced
+  `pcall`-based error handling with `LrFunctionContext`'s
+  `addFailureHandler` (`Dispatch.lua`, `Socket.lua`, `HandlerMetadata.lua`).
+- `photo:getRawMetadata()` throws on an unrecognized field name (there is
+  no `dateCreated` key; it's `dateTimeOriginal`) (`HandlerMetadata.lua`).
+- Lua's `cond and a or b` ternary idiom silently breaks when `a` is
+  `nil`/`false` — `(rating == 0) and nil or rating` always evaluated to
+  `rating`, so clearing a rating actually sent a literal `0`, which
+  Lightroom rejects (`HandlerOrganization.lua`).
+- Empty Lua tables are ambiguous between `{}` and `[]` in JSON; every
+  value this protocol sends is a list, so empty now encodes as `[]`
+  (`Json.lua`).
+- The TS client coupled its two TCP connections together (tearing down
+  both if either's connection attempt failed), which raced against the
+  plugin rebinding its response socket on every fresh request connection
+  into a self-sustaining disconnect loop — decoupled them into
+  independently-reconnecting sockets (`plugin-socket.ts`).
 
 ## Setup
 
