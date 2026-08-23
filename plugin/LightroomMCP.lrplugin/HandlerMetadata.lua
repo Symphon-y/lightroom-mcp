@@ -4,8 +4,10 @@ local PhotoLookup = require 'PhotoLookup'
 
 local HandlerMetadata = {}
 
+-- Verified against the SDK's LrPhoto API reference (getRawMetadata throws
+-- on an unknown key, so every entry here has to be a real one).
 local RAW_FIELDS = {
-    'rating', 'pickStatus', 'colorNameForLabel', 'dateCreated',
+    'rating', 'pickStatus', 'colorNameForLabel', 'dateTimeOriginal',
     'fileFormat', 'dimensions', 'gps', 'keywords', 'path',
 }
 
