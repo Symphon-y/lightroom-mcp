@@ -56,6 +56,27 @@ catalog (not just built/reviewed): `get_selected_photos`,
 behavior) — the field/operation names there are still the least-verified
 part of the SDK usage. Worth a live check before relying on it.
 
+## Status: `get_photo_preview` — verified working
+
+A 10th tool, added after Phase 1: renders a downsized JPEG of a photo via
+`LrExportSession` and returns it as an MCP `image` content block, so
+Claude can actually see a photo (most of the library is RAW, which
+Claude's file tools can't decode directly) — needed for real culling,
+duplicate comparison, and edit assessment. Confirmed live end-to-end: a
+real photo exported at 1024px/q0.75 came back as an 86KB JPEG in ~3s, the
+`maxDimension` constraint was honored (contrary to some forum reports that
+it isn't always, from a plugin script), and the rendered image was visibly
+correct when inspected directly.
+
+**Known limitation:** if the plugin connection drops between the export
+completing and the response reaching the server (the same transient
+reconnect noted above), the exported temp file is orphaned — the server
+never received its path, so it can't clean it up. Observed live: a couple
+of leftover folders under `%TEMP%\lightroom-mcp-previews\` after a
+dropped connection during testing. Not a correctness problem (OS temp
+dir, and it's bytes not catalog state), but worth a periodic sweep if this
+becomes noticeable at real usage scale — not built yet.
+
 **Phase 2 (batch develop editing — presets, copying develop settings) is
 not implemented yet.** It's the next milestone.
 
