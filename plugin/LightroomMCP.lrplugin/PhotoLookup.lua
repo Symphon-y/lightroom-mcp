@@ -26,4 +26,41 @@ function PhotoLookup.summary(photo)
     }
 end
 
+-- Verified against the SDK's LrPhoto API reference (getRawMetadata throws
+-- on an unknown key, so every entry here has to be a real one) -- same
+-- defensive whitelist pattern as HandlerMetadata.lua's RAW_FIELDS.
+-- Used by get_folder_photos so duplicate/burst clustering can run off this
+-- one call without a separate get_photo_metadata round-trip per photo.
+local FOLDER_SUMMARY_FIELDS = {
+    'dateTimeOriginal', 'focalLength', 'shutterSpeed', 'aperture', 'isoSpeedRating',
+    'croppedDimensions', 'rating', 'pickStatus', 'colorNameForLabel', 'keywords',
+}
+
+function PhotoLookup.folderSummary(catalog, photo)
+    local out = {
+        id = photo.localIdentifier,
+        path = photo:getRawMetadata('path'),
+        fileName = photo:getFormattedMetadata('fileName'),
+    }
+
+    catalog:withReadAccessDo(function()
+        for _, field in ipairs(FOLDER_SUMMARY_FIELDS) do
+            local value = photo:getRawMetadata(field)
+            if value ~= nil then
+                if field == 'keywords' and type(value) == 'table' then
+                    local names = {}
+                    for i, kw in ipairs(value) do
+                        names[i] = kw:getName()
+                    end
+                    out.keywords = names
+                else
+                    out[field] = value
+                end
+            end
+        end
+    end)
+
+    return out
+end
+
 return PhotoLookup

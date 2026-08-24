@@ -1,10 +1,13 @@
 #!/usr/bin/env node
-import { readFileSync, rmSync } from "node:fs";
+import { readFileSync, rmSync, readdirSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { Dispatcher } from "./dispatcher.js";
 import { tools } from "./tools/index.js";
 import { getPhotoPreview } from "./tools/getPhotoPreview.js";
+import { sweepPreviewTemp } from "./tools/sweepPreviewTemp.js";
 
 interface PhotoPreviewResult {
   path: string;
@@ -63,6 +66,45 @@ async function main() {
             }),
           },
         ],
+      };
+    }
+  );
+
+  // Special-cased like getPhotoPreview, but simpler: this never touches
+  // the Lightroom catalog at all (pure local temp-directory housekeeping),
+  // so it doesn't call dispatcher.call()/go through the Lua plugin.
+  server.tool(
+    sweepPreviewTemp.name,
+    sweepPreviewTemp.description,
+    sweepPreviewTemp.inputShape,
+    async (args: { olderThanMinutes?: number }) => {
+      const olderThanMinutes = args.olderThanMinutes ?? 10;
+      const cutoff = Date.now() - olderThanMinutes * 60_000;
+      const root = join(tmpdir(), "lightroom-mcp-previews");
+
+      let removed = 0;
+      let entries: string[] = [];
+      try {
+        entries = readdirSync(root);
+      } catch {
+        // Root doesn't exist yet -- nothing to sweep.
+      }
+
+      for (const entry of entries) {
+        const entryPath = join(root, entry);
+        try {
+          const stat = statSync(entryPath);
+          if (stat.isDirectory() && stat.mtimeMs < cutoff) {
+            rmSync(entryPath, { recursive: true, force: true });
+            removed++;
+          }
+        } catch (err) {
+          console.error(`[lightroom-mcp] failed to sweep ${entryPath}:`, (err as Error).message);
+        }
+      }
+
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify({ removed }) }],
       };
     }
   );
