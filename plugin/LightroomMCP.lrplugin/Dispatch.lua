@@ -4,6 +4,7 @@ local HandlerOrganization = require 'HandlerOrganization'
 local HandlerSearch = require 'HandlerSearch'
 local HandlerCollections = require 'HandlerCollections'
 local HandlerPreview = require 'HandlerPreview'
+local HandlerFolders = require 'HandlerFolders'
 
 local Dispatch = {}
 
@@ -22,6 +23,8 @@ local ACTIONS = {
     create_collection = HandlerCollections.createCollection,
     add_to_collection = HandlerCollections.addToCollection,
     get_photo_preview = HandlerPreview.getPhotoPreview,
+    list_folders = HandlerFolders.listFolders,
+    get_folder_photos = HandlerFolders.getFolderPhotos,
 }
 
 -- request: { hello, id, action, params }. reply(response) sends the result
