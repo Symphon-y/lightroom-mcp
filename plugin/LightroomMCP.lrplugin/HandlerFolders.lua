@@ -4,8 +4,8 @@ local PhotoLookup = require 'PhotoLookup'
 
 local HandlerFolders = {}
 
-local MAX_LIMIT = 500
-local DEFAULT_LIMIT = 200
+local MAX_LIMIT = 100
+local DEFAULT_LIMIT = 40
 
 -- Recursively collects every LrFolder in the catalog (top-level via
 -- catalog:getFolders(), then descending through folder:getChildren()).

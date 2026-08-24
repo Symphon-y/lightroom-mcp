@@ -48,9 +48,12 @@ Ask whether subfolders are included only if the folder has children (a folder
 has children if another folder's `parentPath` in the same `list_folders` result
 equals its `path`).
 
-`get_folder_photos` is paginated (200 per page, hard cap 500) — a folder over
-that size needs multiple calls (`offset`/`limit`) to see everything. Fetch all
-pages before clustering; don't cull a partial folder silently.
+`get_folder_photos` is paginated (default 40 per page, hard cap 100 — the
+per-photo payload is large enough that bigger pages can exceed the MCP
+response size limit) — almost every real folder needs multiple calls
+(`offset`/`limit`) to see everything. Fetch all pages before clustering; don't
+cull a partial folder silently. For a folder in the thousands, that's dozens of
+calls — budget for it rather than trying to widen the page size.
 
 ### 2. Open a run manifest
 

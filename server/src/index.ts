@@ -30,7 +30,11 @@ async function main() {
     server.tool(tool.name, tool.description, tool.inputShape, async (args: Record<string, unknown>) => {
       const result = await dispatcher.call(tool.action, args);
       return {
-        content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
+        // Compact, not pretty-printed: this text is read by the model, not a
+        // human, and pretty-printing roughly doubles payload size on
+        // list-shaped results (get_folder_photos, list_folders) for no
+        // benefit.
+        content: [{ type: "text" as const, text: JSON.stringify(result) }],
       };
     });
   }
